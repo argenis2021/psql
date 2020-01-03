@@ -10,20 +10,6 @@ where foo.suma is not null and foo.cliente <>'Desconocido'
 order by foo.suma
 desc;
 
-#Vista Volumen
-create view volumen as
-	*
-	from
-		(
-			select cliente, sum(cantidad) as suma, current_date-max(fecha) as dias 
-			from ventas_la_carlota
-			group by cliente
-		) as qry_volumen
-	where qry_volumen.suma is not null and qry_volumen.cliente <>'Desconocido'
-	order by qry_volumen.suma
-	desc;
-
-
 #Cantidad
 select 
     qry1.cliente,
@@ -41,22 +27,7 @@ group by qry1.cliente
 order by compras
 desc;
 
-#Vista Cantidad
-    create view cantidad as
-    select 	qry1.cliente,
-    		count(qry1.fecha) as compras,
-    		current_date-max(qry1.fecha) as dias,
-    		count(qry1.fecha)/(current_date-min(qry1.fecha)):: double PRECISION *30  as comprasXmes
-	from
-        (
-		select cliente, fecha
-		from ventas_la_carlota
-		where cliente <>'Desconocido'
-		group by fecha, cliente
-	) as qry1
-	group by qry1.cliente
-	order by compras
-	desc;
+
 #frecuencia
 select 
     qry1.cliente,
@@ -102,23 +73,6 @@ group by cliente
 order by cliente;
 
 
-UPDATE no_deseado
-SET nombre = 'Pilar Velásco'
-WHERE
-   nombre = 'Pilar Velasco' 
-RETURNING nombre;
-
-UPDATE ventas_la_carlota
-SET telefono = null
-WHERE
-   telefono = ' ' 
-RETURNING Cliente,
-	fecha,
-	codcli
-	telefono;
-
-
-
 #Estrellas
 SELECT
     volumen.cliente,
@@ -132,9 +86,6 @@ INNER JOIN cantidad ON volumen.cliente = cantidad.cliente
 where (cantidad.compras >3 or volumen.suma >10) and cantidad.dias<61 and volumen.suma/cantidad.compras >4
 order by promedio
 desc;
-
-\copy ventas_la_carlota to '/tmp/ventas.csv' delimiter ',' csv header;
-\copy ventas_la_carlota (Fecha,CodCli,Cliente,Telefono,Cantidad,Descripción,Precio,Locación,Semana) from '/tmp/ventas.csv.tmp' delimiter ',' csv header;
 
 
 #Ultimos 60 dias
@@ -177,12 +128,6 @@ where foo.suma is not null and foo.cliente <>'Desconocido' and dia >120
 order by foo.suma
 desc;
 
-#telefono_cliente
-create view telefono_cliente as
-Select row_number() over (order by cliente) as item, cliente, telefono
-from ventas_la_carlota
-where telefono is not null
-group by cliente, telefono;
 
 #telefono 60
 SELECT
@@ -227,10 +172,6 @@ FROM
 LEFT JOIN no_deseado ON telefono_cliente.cliente = no_deseado.nombre
 where no_deseado.nombre is null;
 
-\copy (select telefono,cliente from tel60) to '/tmp/tel60.csv' delimiter ',' csv header;
-\copy (select telefono,cliente from tel120) to '/tmp/tel120.csv' delimiter ',' csv header;
-\copy (select telefono,cliente from tel_antiguos) to '/tmp/tel_antiguos.csv' delimiter ',' csv header;
-\copy (select telefono,cliente from todos) to '/tmp/tel_todos.csv' delimiter ',' csv header;
 
 #cantidad por producto
 
@@ -256,35 +197,6 @@ group by cantidad,descripción
 order by descripción, total
 desc;
 
-
-create table no_deseado 
-	(
-		pk_no_deseado serial,
-		nombre varchar(30)	
-	);
-
-create table interesados_tmp 
-	(
-		nombre varchar(30),
-		telefono varchar(30)
-	);
-
-create table envases 
-	(
-		pk_envases serial,
-		nombre varchar(30),
-		telefono varchar(30)
-	);
-
-\copy interesados_tmp from '/tmp/interesados.csv.' delimiter ',' csv header;
-
-create table interesados 
-	(
-		pk_interesados serial,
-		nombre varchar(30),
-		telefono varchar(30)
-	);
-
 #Obtención de interesado
 SELECT
     row_number() over (order by interesados_tmp.nombre) as item,
@@ -304,6 +216,3 @@ FROM
     estrellas
 inner JOIN telefono_cliente ON estrellas.cliente = telefono_cliente.cliente
 where telefono_cliente is not null;
-
-\copy interesados from '/tmp/interesados.csv' delimiter ',' csv header;
-\copy (select telefono,nombre from interesados) to '/tmp/interesados.csv' delimiter ',' csv header;
